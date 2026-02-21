@@ -1,0 +1,200 @@
+<!-- START OF FILE batch2022.html -->
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch 2022 - Registered List</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', 'Hind Siliguri', sans-serif; }
+        
+        body { 
+            background: #f0f2f5;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            text-align: center;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .header h2 { font-size: 22px; font-weight: 700; }
+        .header p { font-size: 12px; opacity: 0.9; margin-top: 5px; }
+
+        /* Container */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Loading */
+        #loading { text-align: center; margin-top: 50px; color: #777; font-weight: 600; }
+
+        /* Card Style */
+        .student-card {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+            border-left: 5px solid #ddd;
+        }
+        
+        .student-card.approved { border-left-color: #27ae60; } /* Green for Approved */
+        .student-card.pending { border-left-color: #f39c12; }  /* Orange for Pending */
+
+        .student-img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #eee;
+            margin-right: 15px;
+        }
+
+        .student-info { flex: 1; }
+        .student-name { font-size: 16px; font-weight: 700; color: #2c3e50; margin-bottom: 3px; }
+        .student-phone { font-size: 12px; color: #7f8c8d; display: flex; align-items: center; gap: 5px; }
+        .student-status { 
+            font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; 
+            display: inline-block; margin-top: 5px; text-transform: uppercase;
+        }
+
+        .st-approved { background: #e8f5e9; color: #27ae60; }
+        .st-pending { background: #fff3e0; color: #e67e22; }
+        .st-rejected { background: #ffebee; color: #c0392b; }
+
+        /* Floating count badge */
+        .count-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Batch 2022 List</h2>
+        <div class="count-badge">Total Found: <span id="totalCount">0</span></div>
+    </div>
+
+    <div id="loading"><i class="fas fa-spinner fa-spin"></i> Loading Data...</div>
+    
+    <div class="container" id="listContainer">
+        <!-- Data will appear here -->
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // আপনার কনফিগারেশন
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-n-SgnGwn1P9b-1Xkv3S5QM4U1zHa5nQ",
+            authDomain: "bb-high-school-reunion-2026.firebaseapp.com",
+            projectId: "bb-high-school-reunion-2026",
+            storageBucket: "bb-high-school-reunion-2026.firebasestorage.app",
+            messagingSenderId: "54413925090",
+            appId: "1:54413925090:web:b6ac44faf6313dc19b1cbb"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const listContainer = document.getElementById('listContainer');
+        const loadingDiv = document.getElementById('loading');
+        const countSpan = document.getElementById('totalCount');
+
+        function loadData() {
+            // ডাটাবেস থেকে সব ডাটা আনছি এবং জাভাস্ক্রিপ্টে ফিল্টার করছি (ব্যাচ মিসম্যাচ এড়াতে)
+            const q = collection(db, "students");
+            
+            onSnapshot(q, (snapshot) => {
+                let students = [];
+                
+                snapshot.forEach(doc => {
+                    let d = doc.data();
+                    // শুধুমাত্র 2022 ব্যাচ চেক করা হচ্ছে (String বা Number যাই হোক)
+                    if(d.batch == "2022") {
+                        students.push(d);
+                    }
+                });
+
+                // নামের ক্রমানুসারে সাজানো (A-Z)
+                students.sort((a, b) => a.name.localeCompare(b.name));
+
+                renderList(students);
+            }, (error) => {
+                loadingDiv.innerHTML = "Error loading data: " + error.message;
+                console.error(error);
+            });
+        }
+
+        function renderList(data) {
+            loadingDiv.style.display = 'none';
+            countSpan.innerText = data.length;
+            listContainer.innerHTML = "";
+
+            if(data.length === 0) {
+                listContainer.innerHTML = "<p style='text-align:center; color:#888;'>No students found for Batch 2022.</p>";
+                return;
+            }
+
+            data.forEach(u => {
+                // স্ট্যাটাস কালার এবং টেক্সট ঠিক করা
+                let statusClass = "st-pending";
+                let cardClass = "pending";
+                let statusText = u.payment_status || "Pending";
+
+                if(u.payment_status === "Approved") {
+                    statusClass = "st-approved";
+                    cardClass = "approved";
+                } else if(u.payment_status === "Rejected") {
+                    statusClass = "st-rejected";
+                    cardClass = "";
+                }
+
+                // কার্ড HTML তৈরি
+                const html = `
+                    <div class="student-card ${cardClass}">
+                        <img src="${u.photo}" class="student-img" alt="Photo" onerror="this.src='https://via.placeholder.com/60'">
+                        <div class="student-info">
+                            <div class="student-name">${u.name}</div>
+                            <div class="student-phone"><i class="fas fa-phone-alt"></i> ${u.phone}</div>
+                            <span class="student-status ${statusClass}">${statusText}</span>
+                        </div>
+                        ${u.payment_status === "Approved" ? '<i class="fas fa-check-circle" style="color:#27ae60; font-size:20px;"></i>' : ''}
+                    </div>
+                `;
+                listContainer.innerHTML += html;
+            });
+        }
+
+        // অ্যাপ চালু হলে ডাটা লোড শুরু হবে
+        loadData();
+
+    </script>
+</body>
+</html>
